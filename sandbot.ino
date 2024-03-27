@@ -1,24 +1,37 @@
-char TR_DELIMITER = ' ';
-String MOVE_COMMAND = "MOVE:";
-String MOVE_DONE = "MOVE_DONE";
+const char TR_DELIMITER = ' ';
+const String MOVE_COMMAND = "MOVE:";
+const String MOVE_DONE = "MOVE_DONE";
+const String ERROR_MOVE_IN_PROGRESS = "ERROR_MOVE_IN_PROGRESS";
+const int slowdown_factor = 1000;
+bool is_move_in_progress = false;
 
 void setup() {
   Serial.begin(9600);
 }
 
+int frame = 0;
 void loop() {
-  if (Serial.available() == 0) {
-    return;
+  if (Serial.available() > 0) {
+    String command = Serial.readString();
+    parseCommand(command);
   }
 
-  String command = Serial.readString();
-  parseCommand(command);
+  if (frame % slowdown_factor == 0) {
+    progressMovement();
+    frame = 0;
+  }
+
+  frame++;
 }
 
 void parseCommand(String command) {
   if (command.startsWith(MOVE_COMMAND)) {
+    if (is_move_in_progress) {
+      sendMessage(ERROR_MOVE_IN_PROGRESS);
+      return;
+    }
+    // is_move_in_progress = true;
     move(command);
-    sendMessage(MOVE_DONE);
   }
 }
 
