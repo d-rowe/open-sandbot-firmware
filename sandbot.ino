@@ -2,26 +2,19 @@ const char TR_DELIMITER = ' ';
 const String MOVE_COMMAND = "MOVE:";
 const String MOVE_DONE = "MOVE_DONE";
 const String ERROR_MOVE_IN_PROGRESS = "ERROR_MOVE_IN_PROGRESS";
-const int slowdown_factor = 1000;
 bool is_move_in_progress = false;
 
 void setup() {
   Serial.begin(9600);
 }
 
-int frame = 0;
 void loop() {
   if (Serial.available() > 0) {
     String command = Serial.readString();
     parseCommand(command);
   }
 
-  if (frame % slowdown_factor == 0) {
-    progressMovement();
-    frame = 0;
-  }
-
-  frame++;
+  progressMovement();
 }
 
 void parseCommand(String command) {
@@ -30,7 +23,7 @@ void parseCommand(String command) {
       sendMessage(ERROR_MOVE_IN_PROGRESS);
       return;
     }
-    // is_move_in_progress = true;
+
     move(command);
   }
 }
