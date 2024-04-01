@@ -1,4 +1,4 @@
-const int MAIN_PULLEY_TEETH = 60;
+const int MAIN_PULLEY_TEETH = 90;
 const int MOTOR_PULLEY_TEETH = 14;
 const int DEGREES_PER_STEP = 1.8;
 const int STEPS_PER_DEG = MAIN_PULLEY_TEETH / MOTOR_PULLEY_TEETH / DEGREES_PER_STEP / 2;
@@ -7,13 +7,13 @@ int primary_steps = 0;
 int secondary_steps = 0;
 int primary_steps_target = 0;
 int secondary_steps_target = 0;
-float partial_step = 0;
+double partial_step = 0;
 
-void moveToThetaRho(float theta, float rho) {
-  const float theta_degrees = degrees(theta);
-  const float secondary_degrees = 180 - degrees(acos((0.5 - pow(rho, 2)) * 2));
-  const float primary_offset = secondary_degrees / 2;
-  const float primary_degrees = theta_degrees - primary_offset;
+void moveToThetaRho(double theta, double rho) {
+  const double theta_degrees = degrees(theta);
+  const double secondary_degrees = 180 - degrees(acos((0.5 - pow(rho, 2)) * 2));
+  const double primary_offset = secondary_degrees / 2;
+  const double primary_degrees = theta_degrees - primary_offset;
 
   setTargetPosition(primary_degrees, secondary_degrees);
 }
@@ -26,8 +26,14 @@ void progressMovement() {
 
   if (primary_step_delta == 0 && secondary_step_delta == 0) {
     partial_step = 0;
+    if (!movement_complete) {
+      movement_complete = true;
+      sendMessage(MOVE_DONE);
+    }
     return;
   }
+
+  movement_complete = false;
 
   bool is_primary_faster = primary_step_delta_abs > secondary_step_delta_abs;
   if (is_primary_faster) {
@@ -36,7 +42,7 @@ void progressMovement() {
 
     primaryStep(primary_direction);
     
-    float speed_ratio = secondary_step_delta_abs / primary_step_delta_abs;
+    double speed_ratio = (double) secondary_step_delta_abs / (double) primary_step_delta_abs;
     partial_step += speed_ratio;
   
     while (partial_step >= 0) {
@@ -49,8 +55,7 @@ void progressMovement() {
   
     secondaryStep(secondary_direction);
     
-    float speed_ratio = primary_step_delta_abs / secondary_step_delta_abs;
-    Serial.println(speed_ratio);
+    double speed_ratio = (double) primary_step_delta_abs / (double) secondary_step_delta_abs;
     partial_step += speed_ratio;
   
     while (partial_step >= 0) {
@@ -61,14 +66,16 @@ void progressMovement() {
 }
 
 void primaryStep(int steps) {
+  primary_stepper.step(steps);
   primary_steps += steps;
 }
 
 void secondaryStep(int steps) {
+  secondary_stepper.step(steps);
   secondary_steps += steps;
 }
 
-void setTargetPosition(float primary_deg, float secondary_deg) {
+void setTargetPosition(double primary_deg, double secondary_deg) {
   primary_steps_target = round(primary_deg * STEPS_PER_DEG);
   secondary_steps_target = round(secondary_deg * STEPS_PER_DEG) + primary_steps_target;
 }

@@ -1,11 +1,32 @@
+#include <Stepper.h>
+// number of steps on your motor
+#define STEPS 200
+
 const char TR_DELIMITER = ' ';
+const String SPEED_COMMAND = "SET_SPEED:";
+const String SPEED_ACK = "SPEED_SET";
 const String MOVE_COMMAND = "MOVE:";
+const String MOVE_ACK = "MOVE_ACK";
 const String MOVE_DONE = "MOVE_DONE";
-const String ERROR_MOVE_IN_PROGRESS = "ERROR_MOVE_IN_PROGRESS";
-bool is_move_in_progress = false;
+const String ERR_UNKNOWN_COMMAND = "ERR_UNKNOWN_COMMAND";
+// primary motor driver pins
+const int AIN2 = 18;
+const int AIN1 = 19;
+const int BIN1 = 20;
+const int BIN2 = 21;
+const int AIN4 = 10;
+const int AIN3 = 11;
+const int BIN3 = 12;
+const int BIN4 = 13;
+
+Stepper primary_stepper(STEPS, AIN2, AIN1, BIN1, BIN2);
+Stepper secondary_stepper(STEPS, AIN4, AIN3, BIN3, BIN4);
+bool movement_complete = false;
 
 void setup() {
   Serial.begin(9600);
+  primary_stepper.setSpeed(50);
+  secondary_stepper.setSpeed(50);
 }
 
 void loop() {
@@ -19,20 +40,31 @@ void loop() {
 
 void parseCommand(String command) {
   if (command.startsWith(MOVE_COMMAND)) {
-    if (is_move_in_progress) {
-      sendMessage(ERROR_MOVE_IN_PROGRESS);
-      return;
-    }
-
+    sendMessage(MOVE_ACK);
     move(command);
+    return;
   }
+
+  if (command.startsWith(SPEED_COMMAND)) {
+    setSpeed(command);
+    sendMessage(SPEED_ACK);
+    return;
+  }
+
+  sendMessage(ERR_UNKNOWN_COMMAND);
+}
+
+void setSpeed(String command) {
+  int speed = command.substring(SPEED_COMMAND.length()).toInt();
+  primary_stepper.setSpeed(speed);
+  secondary_stepper.setSpeed(speed);
 }
 
 void move(String command) {
   String thetaRho = command.substring(MOVE_COMMAND.length());
   int delimiterIndex = thetaRho.indexOf(TR_DELIMITER);
-  float theta = thetaRho.substring(0, delimiterIndex).toFloat();
-  float rho = thetaRho.substring(delimiterIndex + 1).toFloat();
+  double theta = thetaRho.substring(0, delimiterIndex).toFloat();
+  double rho = thetaRho.substring(delimiterIndex + 1).toFloat();
 
   moveToThetaRho(theta, rho);
 }
