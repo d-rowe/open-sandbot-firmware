@@ -3,10 +3,6 @@ const int MOTOR_PULLEY_TEETH = 14;
 const int DEGREES_PER_STEP = 1.8;
 const int STEPS_PER_DEG = MAIN_PULLEY_TEETH / MOTOR_PULLEY_TEETH / DEGREES_PER_STEP / 2;
 
-int primary_steps = 0;
-int secondary_steps = 0;
-int primary_steps_target = 0;
-int secondary_steps_target = 0;
 double partial_step = 0;
 
 void moveToThetaRho(double theta, double rho) {
@@ -28,7 +24,7 @@ void progressMovement() {
     partial_step = 0;
     if (!movement_complete) {
       movement_complete = true;
-      sendMessage(MOVE_DONE);
+      sendMessage(IDLE_STATUS);
     }
     return;
   }

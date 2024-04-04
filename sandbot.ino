@@ -4,14 +4,11 @@
 
 const char TR_DELIMITER = ' ';
 const String SPEED_COMMAND = "SPEED:";
-const String SPEED_ACK = "SPEED_ACK";
 const String PAUSE_COMMAND = "PAUSE";
-const String PAUSE_ACK = "PAUSE_ACK";
 const String RESUME_COMMAND = "RESUME";
-const String RESUME_ACK = "RESUME_ACK";
 const String MOVE_COMMAND = "MOVE:";
-const String MOVE_ACK = "MOVE_ACK";
-const String MOVE_DONE = "MOVE_DONE";
+const String IDLE_STATUS = "STATUS:IDLE";
+const String MOVING_STATUS = "STATUS:MOVING";
 const String ERR_UNKNOWN_COMMAND = "ERR_UNKNOWN_COMMAND";
 // primary motor driver pins
 const int AIN2 = 18;
@@ -23,6 +20,11 @@ const int AIN3 = 11;
 const int BIN3 = 12;
 const int BIN4 = 13;
 
+int primary_steps = 0;
+int secondary_steps = 0;
+int primary_steps_target = 0;
+int secondary_steps_target = 0;
+
 Stepper primary_stepper(STEPS, AIN2, AIN1, BIN1, BIN2);
 Stepper secondary_stepper(STEPS, AIN4, AIN3, BIN3, BIN4);
 bool movement_complete = false;
@@ -31,8 +33,8 @@ bool paused = false;
 void setup() {
   Serial.begin(115200);
   Serial.setTimeout(2);
-  primary_stepper.setSpeed(50);
-  secondary_stepper.setSpeed(50);
+  primary_stepper.setSpeed(100);
+  secondary_stepper.setSpeed(100);
 }
 
 void loop() {
@@ -48,26 +50,30 @@ void loop() {
 
 void parseCommand(String command) {
   if (command.startsWith(MOVE_COMMAND)) {
-    sendMessage(MOVE_ACK);
     move(command);
+    if (movement_complete) {
+      sendMessage(IDLE_STATUS);
+    } else {
+      sendMessage(MOVING_STATUS);
+    }
     return;
   }
 
   if (command.startsWith(SPEED_COMMAND)) {
     setSpeed(command);
-    sendMessage(SPEED_ACK);
     return;
   }
 
   if (command.startsWith(PAUSE_COMMAND)) {
     paused = true;
-    sendMessage(PAUSE_ACK);
     return;
   }
 
   if (command.startsWith(RESUME_COMMAND)) {
     paused = false;
-    sendMessage(RESUME_ACK);
+    if (movement_complete) {
+      sendMessage(IDLE_STATUS);
+    }
     return;
   }
 
