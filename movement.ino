@@ -15,6 +15,11 @@ void moveToThetaRho(double theta, double rho) {
 }
 
 void progressMovement() {
+  if (is_homing) {
+    progressHome();
+    return;
+  }
+
   int primary_step_delta = primary_steps_target - primary_steps;
   int primary_step_delta_abs = abs(primary_step_delta);
   int secondary_step_delta = secondary_steps_target - secondary_steps;
@@ -29,7 +34,10 @@ void progressMovement() {
     return;
   }
 
-  movement_complete = false;
+  if (movement_complete) {
+    sendMessage(MOVING_STATUS);
+    movement_complete = false;
+  }
 
   bool is_primary_faster = primary_step_delta_abs > secondary_step_delta_abs;
   if (is_primary_faster) {
@@ -59,6 +67,24 @@ void progressMovement() {
       partial_step -= 1;
     }
   }
+}
+
+void progressHome() {
+  const is_primary_home = digitalRead(HAL1);
+  const is_secondary_home = digitalRead(HAL2);
+  if (!is_primary_home) {
+    primary_stepper.step(1);
+    return;
+  }
+
+  if (!is_secondary_home) {
+    secondary_stepper.step(1);
+    return;
+  }
+
+  primary_steps = 0;
+  secondary_steps = 0;
+  is_homing = false;
 }
 
 void primaryStep(int steps) {
