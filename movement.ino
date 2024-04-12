@@ -7,7 +7,7 @@ double partial_step = 0;
 
 void moveToThetaRho(double theta, double rho) {
   const double theta_degrees = degrees(theta);
-  const double secondary_degrees = 180 - degrees(acos((0.5 - pow(rho, 2)) * 2));
+  const double secondary_degrees = 180.0 - degrees(acos((0.5 - pow(rho, 2.0)) * 2.0));
   const double primary_offset = secondary_degrees / 2;
   const double primary_degrees = theta_degrees - primary_offset;
 
@@ -70,8 +70,8 @@ void progressMovement() {
 }
 
 void progressHome() {
-  const is_primary_home = digitalRead(HAL1);
-  const is_secondary_home = digitalRead(HAL2);
+  const bool is_primary_home = isHallSensorActivated(HAL1);
+  const bool is_secondary_home = isHallSensorActivated(HAL2);
   if (!is_primary_home) {
     primary_stepper.step(1);
     return;
@@ -85,6 +85,8 @@ void progressHome() {
   primary_steps = 0;
   secondary_steps = 0;
   is_homing = false;
+  setSpeed(STEPPER_SPEED_DEFAULT);
+  sendMessage(IDLE_STATUS);
 }
 
 void primaryStep(int steps) {
@@ -100,4 +102,8 @@ void secondaryStep(int steps) {
 void setTargetPosition(double primary_deg, double secondary_deg) {
   primary_steps_target = round(primary_deg * STEPS_PER_DEG);
   secondary_steps_target = round(secondary_deg * STEPS_PER_DEG) + primary_steps_target;
+}
+
+bool isHallSensorActivated(int pin) {
+  return digitalRead(pin) == 0;
 }
