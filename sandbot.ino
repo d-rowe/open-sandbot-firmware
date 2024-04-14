@@ -29,8 +29,7 @@ const int BIN4 = 13;
 const int HAL1 = 14;
 const int HAL2 = 15;
 // stepper speeds
-const int STEPPER_SPEED_DEFAULT = 250;
-const int STEPPER_SPEED_HOMING = STEPPER_SPEED_DEFAULT / 3;
+const int STEPPER_SPEED_DEFAULT = 40;
 
 int primary_steps = 0;
 int secondary_steps = 0;
@@ -50,7 +49,7 @@ void setup() {
   pinMode(HAL2, INPUT);
   setSpeed(STEPPER_SPEED_DEFAULT);
   // home on power on
-  // home();
+  home();
 }
 
 void loop() {
@@ -66,12 +65,12 @@ void loop() {
 
 void parseCommand(String command) {
   if (command.startsWith(MOVE_COMMAND)) {
-    move(command);
+    processMoveCommand(command);
     return;
   }
 
   if (command.startsWith(SPEED_COMMAND)) {
-    parseSpeedCommand(command);
+    processSpeedCommand(command);
     return;
   }
 
@@ -98,11 +97,12 @@ void parseCommand(String command) {
 
 void home() {
   is_homing = true;
-  setSpeed(STEPPER_SPEED_HOMING);
+  // TODO: keep track of previous speed to restore
+  setSpeed(STEPPER_SPEED_DEFAULT);
   sendMessage(HOMING_STATUS);
 }
 
-void parseSpeedCommand(String command) {
+void processSpeedCommand(String command) {
   int speed = command.substring(SPEED_COMMAND.length()).toInt();
   setSpeed(speed);
 }
@@ -112,7 +112,7 @@ void setSpeed(int speed) {
   secondary_stepper.setSpeed(speed);
 }
 
-void move(String command) {
+void processMoveCommand(String command) {
   String thetaRho = command.substring(MOVE_COMMAND.length());
   int delimiterIndex = thetaRho.indexOf(TR_DELIMITER);
   double theta = thetaRho.substring(0, delimiterIndex).toFloat();

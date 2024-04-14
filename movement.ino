@@ -1,7 +1,8 @@
-const int MAIN_PULLEY_TEETH = 90;
-const int MOTOR_PULLEY_TEETH = 14;
-const int DEGREES_PER_STEP = 1.8;
-const int STEPS_PER_DEG = MAIN_PULLEY_TEETH / MOTOR_PULLEY_TEETH / DEGREES_PER_STEP / 2;
+const double MAIN_PULLEY_TEETH = 90;
+const double MOTOR_PULLEY_TEETH = 16;
+const double DEGREES_PER_STEP = 1.8;
+const double STEPS_PER_DEG = MAIN_PULLEY_TEETH / MOTOR_PULLEY_TEETH / DEGREES_PER_STEP;
+const int PRIMARY_HOME_OFFSET = 35;
 
 double partial_step = 0;
 
@@ -72,21 +73,24 @@ void progressMovement() {
 void progressHome() {
   const bool is_primary_home = isHallSensorActivated(HAL1);
   const bool is_secondary_home = isHallSensorActivated(HAL2);
-  if (!is_primary_home) {
-    primary_stepper.step(1);
+
+  if (is_primary_home && is_secondary_home) {
+    primary_steps = 0;
+    secondary_steps = 0;
+    is_homing = false;
+    primary_stepper.step(PRIMARY_HOME_OFFSET);
+    setSpeed(STEPPER_SPEED_DEFAULT);
+    sendMessage(IDLE_STATUS);
     return;
   }
 
   if (!is_secondary_home) {
-    secondary_stepper.step(1);
-    return;
+    secondary_stepper.step(-1);
   }
 
-  primary_steps = 0;
-  secondary_steps = 0;
-  is_homing = false;
-  setSpeed(STEPPER_SPEED_DEFAULT);
-  sendMessage(IDLE_STATUS);
+  if (!is_primary_home) {
+    primary_stepper.step(1);
+  }
 }
 
 void primaryStep(int steps) {
