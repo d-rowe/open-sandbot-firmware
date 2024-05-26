@@ -22,10 +22,10 @@ impl PolarCoordinate {
         }
     }
 
-    pub fn multiply(&self, value: f64) -> PolarCoordinate {
+    pub fn scale(&self, factor: f64) -> PolarCoordinate {
         PolarCoordinate {
-            theta: self.theta * value,
-            rho: self.rho * value,
+            theta: self.theta * factor,
+            rho: self.rho * factor,
         }
     }
 

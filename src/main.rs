@@ -1,23 +1,32 @@
+use std::collections::VecDeque;
 use crate::coordinate::PolarCoordinate;
-use crate::motion_controller::MotionController;
+use crate::motion_controller::{MotionController, MotionControllerConfig};
 
 mod coordinate;
 mod motion_controller;
 
 fn main() {
-    let coordinate_0 = PolarCoordinate { theta: 0.0, rho: 1.0 };
-    let coordinate_1 = PolarCoordinate { theta: 10.0, rho: 1.0 };
-    let coordinate_2 = PolarCoordinate { theta: 10.0, rho: 0.5 };
-    let coordinate_3 = PolarCoordinate { theta: 1.0, rho: 0.9 };
-    let mut motion_controller = MotionController::new();
-    motion_controller.queue_position(coordinate_0);
-    motion_controller.queue_position(coordinate_1);
-    motion_controller.queue_position(coordinate_2);
-    motion_controller.queue_position(coordinate_3);
-    let frame_0 = motion_controller.next_frame();
-    let frame_1 = motion_controller.next_frame();
-    let frame_2 = motion_controller.next_frame();
-    let frame_3 = motion_controller.next_frame();
+    let mut positions: VecDeque<PolarCoordinate> = VecDeque::new();
+    positions.push_back(PolarCoordinate { theta: 1.0, rho: 1.0 });
+
+    positions.push_back(PolarCoordinate { theta: 2.0, rho: 1.0 });
+    positions.push_back(PolarCoordinate { theta: 100.0, rho: 1.0 });
+    positions.push_back(PolarCoordinate { theta: 1.0, rho: 0.9 });
+    let mut motion_controller = MotionController::new(MotionControllerConfig {
+        home_position: PolarCoordinate { theta: 0.0, rho: 0.0},
+        max_acceleration: 1.0,
+        max_speed: 100.0,
+        min_speed: 1.0,
+        step_distance: 0.05,
+    });
+    let mut frame = motion_controller.next_frame();
+    while frame.speed < 100.0 {
+        let position_count = positions.len();
+        if position_count > 0 && motion_controller.is_queue_ready() {
+           motion_controller.queue_position(positions.pop_front().unwrap());
+        }
+       frame = motion_controller.next_frame();
+    }
     println!("done");
 }
 
