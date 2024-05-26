@@ -14,22 +14,25 @@ impl PolarCoordinate {
     pub fn vector_to(&self, other: &PolarCoordinate) -> PolarCoordinate {
         let theta_delta = other.theta - self.theta;
         let rho_delta = other.rho - self.rho;
-        let mut theta_direction: f64;
-        if (theta_delta == 0.0) {
-            theta_direction = 0.0;
-        } else {
-            theta_direction = theta_delta / theta_delta.abs();
-        }
-        let mut rho_direction: f64;
-        if (rho_delta == 0.0) {
-            rho_direction = 0.0;
-        } else {
-            rho_direction = rho_delta / rho_delta.abs();
-        }
+        let normalization_factor = theta_delta.abs().max(rho_delta.abs());
 
         PolarCoordinate {
-            theta: theta_direction,
-            rho: rho_direction,
+            theta: theta_delta / normalization_factor,
+            rho: rho_delta / normalization_factor,
+        }
+    }
+
+    pub fn multiply(&self, value: f64) -> PolarCoordinate {
+        PolarCoordinate {
+            theta: self.theta * value,
+            rho: self.rho * value,
+        }
+    }
+
+    pub fn direction(&self) -> PolarCoordinate {
+        PolarCoordinate {
+            theta: direction(self.theta),
+            rho: direction(self.rho),
         }
     }
 
@@ -42,6 +45,13 @@ impl PolarCoordinate {
 
     pub fn equals(&self, other: &PolarCoordinate) -> bool {
         self.theta == other.theta && self.rho == other.rho
+    }
+}
+
+fn direction(value: f64) -> f64 {
+    match value {
+        0.0 => 0.0,
+        val => val / val.abs(),
     }
 }
 

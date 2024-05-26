@@ -18,7 +18,6 @@ fn main() {
     let frame_1 = motion_controller.next_frame();
     let frame_2 = motion_controller.next_frame();
     let frame_3 = motion_controller.next_frame();
-    let frame_4 = motion_controller.next_frame();
-    let frame_5 = motion_controller.next_frame();
+    println!("done");
 }
 
