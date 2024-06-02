@@ -11,17 +11,6 @@ impl PolarCoordinate {
         theta_distance + rho_distance
     }
 
-    pub fn vector_to(&self, other: &PolarCoordinate) -> PolarCoordinate {
-        let theta_delta = other.theta - self.theta;
-        let rho_delta = other.rho - self.rho;
-        let normalization_factor = theta_delta.abs().max(rho_delta.abs());
-
-        PolarCoordinate {
-            theta: theta_delta / normalization_factor,
-            rho: rho_delta / normalization_factor,
-        }
-    }
-
     pub fn scale(&self, factor: f64) -> PolarCoordinate {
         PolarCoordinate {
             theta: self.theta * factor,
@@ -29,7 +18,21 @@ impl PolarCoordinate {
         }
     }
 
-    pub fn direction(&self) -> PolarCoordinate {
+    pub fn add(&self, other: &PolarCoordinate) -> Self {
+        PolarCoordinate {
+            theta: self.theta + other.theta,
+            rho: self.rho + other.rho,
+        }
+    }
+
+    pub fn subtract(&self, other: &PolarCoordinate) -> Self {
+        PolarCoordinate {
+            theta: self.theta - other.theta,
+            rho: self.rho - other.rho,
+        }
+    }
+
+    pub fn direction(&self) -> Self {
         PolarCoordinate {
             theta: direction(self.theta),
             rho: direction(self.rho),
@@ -52,6 +55,22 @@ fn direction(value: f64) -> f64 {
     match value {
         0.0 => 0.0,
         val => val / val.abs(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn polar_coordinate_equals() {
+        let a = PolarCoordinate { theta: 0.2, rho: 0.3 };
+        let b = PolarCoordinate { theta: 0.2, rho: 0.3 };
+        let c = PolarCoordinate { theta: 0.2, rho: 0.4 };
+        let d = PolarCoordinate { theta: 0.1, rho: 0.3 };
+        assert_eq!(a.equals(&b), true);
+        assert_eq!(a.equals(&c), false);
+        assert_eq!(a.equals(&d), false);
     }
 }
 
