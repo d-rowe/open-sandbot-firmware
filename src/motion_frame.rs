@@ -1,5 +1,6 @@
 use crate::coordinate::PolarCoordinate;
 
+
 #[derive(Clone)]
 pub struct MotionFrame {
     pub position: PolarCoordinate,

@@ -1,5 +1,6 @@
 use libm::fabs;
 
+
 #[derive(Clone)]
 pub struct PolarCoordinate {
     pub theta: f64,

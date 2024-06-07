@@ -1,30 +1,31 @@
 use embassy_rp::gpio;
+use embassy_rp::gpio::{AnyPin, Level};
 use embassy_time::Timer;
 use gpio::Output;
 
 const STEP_COUNT: i64 = 4;
 
 pub struct Stepper<'a> {
-    pin0: Output<'a>,
-    pin1: Output<'a>,
-    pin2: Output<'a>,
-    pin3: Output<'a>,
+    out0: Output<'a, AnyPin>,
+    out1: Output<'a, AnyPin>,
+    out2: Output<'a, AnyPin>,
+    out3: Output<'a, AnyPin>,
     speed: f64,
     current_step: i64,
 }
 
 impl Stepper<'_> {
     pub fn new<'a>(
-        pin0: Output<'a>,
-        pin1: Output<'a>,
-        pin2: Output<'a>,
-        pin3: Output<'a>,
+        pin0: AnyPin,
+        pin1: AnyPin,
+        pin2: AnyPin,
+        pin3: AnyPin,
     ) -> Stepper<'a> {
         Stepper {
-            pin0 ,
-            pin1,
-            pin2,
-            pin3,
+            out0: create_output(pin0),
+            out1: create_output(pin1),
+            out2: create_output(pin2),
+            out3: create_output(pin3),
             speed: 20.0,
             current_step: 0,
         }
@@ -48,30 +49,34 @@ impl Stepper<'_> {
 
         match self.current_step {
             0 => {
-                self.pin0.set_high();
-                self.pin1.set_low();
-                self.pin2.set_high();
-                self.pin3.set_low();
+                self.out0.set_high();
+                self.out1.set_low();
+                self.out2.set_high();
+                self.out3.set_low();
             },
             1 => {
-                self.pin0.set_low();
-                self.pin1.set_high();
-                self.pin2.set_high();
-                self.pin3.set_low();
+                self.out0.set_low();
+                self.out1.set_high();
+                self.out2.set_high();
+                self.out3.set_low();
             },
             2 => {
-                self.pin0.set_low();
-                self.pin1.set_high();
-                self.pin2.set_low();
-                self.pin3.set_high();
+                self.out0.set_low();
+                self.out1.set_high();
+                self.out2.set_low();
+                self.out3.set_high();
             },
             3 => {
-                self.pin0.set_high();
-                self.pin1.set_low();
-                self.pin2.set_low();
-                self.pin3.set_high();
+                self.out0.set_high();
+                self.out1.set_low();
+                self.out2.set_low();
+                self.out3.set_high();
             },
-            _ => panic!("current step can only be 0-3"),
+            _ => (),
         }
     }
+}
+
+fn create_output(pin: AnyPin) -> Output<'static, AnyPin> {
+    Output::new(pin, Level::Low)
 }

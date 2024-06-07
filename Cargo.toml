@@ -1,6 +1,28 @@
 [package]
-name = "open-sandbot-firmware-rs"
-version = "0.1.0"
 edition = "2021"
+name = "open-sandbot-firmware"
+version = "0.1.0"
+authors = ["Daniel Rowe <danielrowetech@gmail.com>"]
+resolver = "2"
 
 [dependencies]
+defmt = "0.3"
+defmt-rtt = "0.4"
+panic-probe = { version = "0.3", features = ["print-defmt"] }
+
+embedded-hal = "1.0.0"
+embedded-hal-async = "1.0.0"
+embedded-io = "0.6.1"
+embedded-io-async = "0.6.1"
+embedded-storage = "0.3.1"
+
+cortex-m-rt = "0.7.3"
+
+embassy-executor = { version = "0.5.0", features = ["task-arena-size-1024", "arch-cortex-m", "executor-thread", "defmt", "integrated-timers", "executor-interrupt"] }
+embassy-sync = { version = "0.5.0" }
+embassy-time = { version = "0.3.0", features = ["defmt", "defmt-timestamp-uptime"] }
+
+cortex-m = { version = "0.7.6" }
+embassy-rp = { version = "0.1.0", features = ["defmt", "unstable-pac", "time-driver", "critical-section-impl"] }
+embedded-alloc = "0.5.1"
+libm = "0.2.8"

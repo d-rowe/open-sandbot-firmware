@@ -1,9 +1,10 @@
 extern crate alloc;
 
-use crate::coordinate::PolarCoordinate;
-use crate::common::MotionFrame;
 use alloc::collections::VecDeque;
 use libm::ceil;
+use crate::coordinate::PolarCoordinate;
+use crate::motion_frame::MotionFrame;
+
 
 struct Checkpoint {
     position: PolarCoordinate,
@@ -98,12 +99,6 @@ impl MotionController {
         };
         let step_size = current_checkpoint.step_size;
         let steps = current_checkpoint.steps;
-        let slowdown_relative_distance = next_slowdown_distance - current_frame.absolute_distance;
-        let speed_delta = match slowdown_relative_distance > 0.0
-            && slowdown_relative_distance < current_checkpoint.step_size {
-            true => 0.0,
-            false => self.config.max_acceleration * acceleration_direction * step_size,
-        };
         let slowdown_relative_distance = next_slowdown_distance - current_frame.absolute_distance;
         let mut speed = current_frame.speed + (self.config.max_acceleration * acceleration_direction * step_size);
         if slowdown_relative_distance > 0.0 && slowdown_relative_distance < current_checkpoint.step_size {

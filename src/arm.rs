@@ -1,8 +1,11 @@
 use core::f64::consts::PI;
+use embassy_rp::gpio::AnyPin;
+use embassy_rp::Peripherals;
 use libm::{acos, pow, round, fabs};
-use crate::common::MotionFrame;
+use crate::motion_frame::MotionFrame;
 use crate::coordinate::PolarCoordinate;
 use crate::stepper::Stepper;
+
 
 const MAIN_PULLEY_TEETH: i8 = 90;
 const MOTOR_PULLEY_TEETH: i8 = 16;
@@ -10,7 +13,6 @@ const DEGREES_PER_STEP: f64 = 1.8;
 const STEPS_PER_DEG: f64 = MAIN_PULLEY_TEETH as f64
     / MOTOR_PULLEY_TEETH as f64
     / DEGREES_PER_STEP;
-const PRIMARY_HOME_OFFSET: i8 = 35;
 
 struct StepPosition {
     primary_steps: i64,
@@ -39,14 +41,22 @@ pub struct Arm<'a> {
 }
 
 impl Arm<'_> {
-    pub fn new(primary_stepper: Stepper<'static>, secondary_stepper: Stepper<'static>) -> Self {
+    pub fn new(p: Peripherals) -> Self {
+        let s0_pin0 = AnyPin::from(p.PIN_18);
+        let s0_pin1= AnyPin::from(p.PIN_19);
+        let s0_pin2 = AnyPin::from(p.PIN_20);
+        let s0_pin3 = AnyPin::from(p.PIN_21);
+        let s1_pin0 = AnyPin::from(p.PIN_10);
+        let s1_pin1= AnyPin::from(p.PIN_11);
+        let s1_pin2 = AnyPin::from(p.PIN_12);
+        let s1_pin3 = AnyPin::from(p.PIN_13);
         Arm {
-            step_position: StepPosition {
-                primary_steps: 0,
-                secondary_steps: 0,
-            },
-            primary_stepper,
-            secondary_stepper,
+            step_position: get_target_step_position(&PolarCoordinate {
+                theta: 0.0,
+                rho: 0.0,
+            }),
+            primary_stepper: Stepper::new(s0_pin0, s0_pin1, s0_pin2, s0_pin3),
+            secondary_stepper: Stepper::new(s1_pin0, s1_pin1, s1_pin2, s1_pin3),
         }
     }
 
@@ -57,7 +67,7 @@ impl Arm<'_> {
             relative_distance,
             ..
         } = frame;
-        let target_step_position = self.get_target_step_position(position);
+        let target_step_position = get_target_step_position(position);
         let delta_step_position = target_step_position.delta(&self.step_position);
 
         if delta_step_position.get_total_steps() == 0 {
@@ -81,7 +91,7 @@ impl Arm<'_> {
         let secondary_direction = secondary_step_delta / secondary_step_delta_abs;
 
         // FIXME: unnecessary duplication/branching, lost a battle with the borrow checker :(
-        if (is_primary_faster) {
+        if is_primary_faster {
             let speed_ratio = secondary_step_delta_abs as f64 / primary_step_delta_abs as f64;
             self.primary_stepper.step(primary_direction).await;
             self.step_position.primary_steps += primary_direction;
@@ -101,7 +111,7 @@ impl Arm<'_> {
 
             partial_step += speed_ratio;
 
-            while (partial_step >= 0.0) {
+            while partial_step >= 0.0 {
                 self.primary_stepper.step(primary_direction).await;
                 self.step_position.primary_steps += primary_direction;
                 partial_step -= 1.0;
@@ -113,19 +123,19 @@ impl Arm<'_> {
         self.primary_stepper.set_speed(speed);
         self.secondary_stepper.set_speed(speed);
     }
+}
 
-    fn get_target_step_position(&self, position: &PolarCoordinate) -> StepPosition {
-        let PolarCoordinate {theta, rho} = position;
-        let theta_degrees = degrees(*theta);
-        let secondary_degrees = 180.0 - degrees(acos((0.5 - pow(*rho, 2.0)) * 2.0));
-        let primary_offset = secondary_degrees / 2.0;
-        let primary_degrees = theta_degrees - primary_offset;
+fn get_target_step_position(position: &PolarCoordinate) -> StepPosition {
+    let PolarCoordinate {theta, rho} = position;
+    let theta_degrees = degrees(*theta);
+    let secondary_degrees = 180.0 - degrees(acos((0.5 - pow(*rho, 2.0)) * 2.0));
+    let primary_offset = secondary_degrees / 2.0;
+    let primary_degrees = theta_degrees - primary_offset;
 
-        let primary_steps = round(primary_degrees * STEPS_PER_DEG) as i64;
-        StepPosition {
-            primary_steps,
-            secondary_steps:  round(secondary_degrees * STEPS_PER_DEG) as i64 + primary_steps,
-        }
+    let primary_steps = round(primary_degrees * STEPS_PER_DEG) as i64;
+    StepPosition {
+        primary_steps,
+        secondary_steps:  round(secondary_degrees * STEPS_PER_DEG) as i64 + primary_steps,
     }
 }
 
