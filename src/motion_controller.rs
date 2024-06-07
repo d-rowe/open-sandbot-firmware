@@ -1,5 +1,9 @@
-use std::collections::VecDeque;
+extern crate alloc;
+
 use crate::coordinate::PolarCoordinate;
+use crate::common::MotionFrame;
+use alloc::collections::VecDeque;
+use libm::ceil;
 
 struct Checkpoint {
     position: PolarCoordinate,
@@ -7,24 +11,6 @@ struct Checkpoint {
     absolute_distance: f64,
     steps: i16,
     step_size: f64,
-}
-
-pub struct MotionFrame {
-    pub position: PolarCoordinate,
-    pub speed: f64,
-    pub relative_distance: f64,
-    absolute_distance: f64,
-}
-
-impl MotionFrame {
-    fn copy(&self) -> Self {
-        MotionFrame {
-            position: self.position.copy(),
-            speed: self.speed,
-            relative_distance: self.relative_distance,
-            absolute_distance: self.absolute_distance,
-        }
-    }
 }
 
 pub struct MotionControllerConfig {
@@ -51,7 +37,7 @@ impl MotionController {
     }
     pub fn queue_position(&mut self, position: PolarCoordinate) {
         let last_checkpoint = &self.checkpoints.back();
-        let prev_position: &PolarCoordinate = match last_checkpoint {
+        let prev_position = match last_checkpoint {
             None => &self.config.home_position,
             checkpoint_opt => &checkpoint_opt.unwrap().position,
         };
@@ -65,15 +51,23 @@ impl MotionController {
             checkpoint_opt => checkpoint_opt.unwrap().absolute_distance,
         };
         let distance = prev_position.distance(&position);
-        let steps = (distance / self.config.step_distance).ceil() as i16;
+        let steps = ceil(distance / self.config.step_distance) as i16;
 
         self.checkpoints.push_back(Checkpoint {
-            position: position.copy(),
+            position: position.clone(),
             vector: position.subtract(&prev_position),
             absolute_distance: distance + prev_absolute_distance,
             steps,
             step_size: distance / (steps as f64),
         });
+    }
+
+    pub fn is_queue_ready(&self) -> bool {
+        let last_absolute_position = match self.checkpoints.back() {
+            None => 0.0,
+            _ => self.checkpoints.back().unwrap().absolute_distance,
+        };
+        last_absolute_position - self.next_slowdown_distance() < 0.5
     }
 
     pub fn next_frame(&mut self) -> MotionFrame {
@@ -84,7 +78,7 @@ impl MotionController {
 
         if !has_current_frame {
             self.current_frame = Some(MotionFrame {
-                position: self.config.home_position.copy(),
+                position: self.config.home_position.clone(),
                 speed: 0.0,
                 relative_distance: 0.0,
                 absolute_distance: 0.0,
@@ -92,7 +86,7 @@ impl MotionController {
         }
 
         if self.checkpoints.len() == 0 {
-           return self.current_frame.as_ref().unwrap().copy()
+            return self.current_frame.as_ref().unwrap().clone()
         }
 
         let current_checkpoint = self.checkpoints.front().unwrap();
@@ -104,6 +98,12 @@ impl MotionController {
         };
         let step_size = current_checkpoint.step_size;
         let steps = current_checkpoint.steps;
+        let slowdown_relative_distance = next_slowdown_distance - current_frame.absolute_distance;
+        let speed_delta = match slowdown_relative_distance > 0.0
+            && slowdown_relative_distance < current_checkpoint.step_size {
+            true => 0.0,
+            false => self.config.max_acceleration * acceleration_direction * step_size,
+        };
         let slowdown_relative_distance = next_slowdown_distance - current_frame.absolute_distance;
         let mut speed = current_frame.speed + (self.config.max_acceleration * acceleration_direction * step_size);
         if slowdown_relative_distance > 0.0 && slowdown_relative_distance < current_checkpoint.step_size {
@@ -122,7 +122,7 @@ impl MotionController {
             self.checkpoints.pop_front();
         }
 
-        self.current_frame = Some(next_frame.copy());
+        self.current_frame = Some(next_frame.clone());
         next_frame
     }
 
@@ -160,14 +160,18 @@ mod tests {
     fn speedup_slowdown() {
         let home_position = PolarCoordinate { theta: 0.0, rho: 0.0 };
         let mut motion_controller = MotionController::new(MotionControllerConfig {
-            home_position: home_position.copy(),
+            home_position: home_position.clone(),
             max_acceleration: 1.0,
             max_speed: 100.0,
             min_speed: 1.0,
             step_distance: 0.1,
         });
         motion_controller.queue_position(PolarCoordinate { theta: 0.0, rho: 0.3 });
+        assert_eq!(motion_controller.is_queue_ready(), true);
         motion_controller.queue_position(PolarCoordinate { theta: -0.4, rho: 0.4 });
+        assert_eq!(motion_controller.is_queue_ready(), true);
+        motion_controller.queue_position(PolarCoordinate { theta: 0.0, rho: 0.0 });
+        assert_eq!(motion_controller.is_queue_ready(), false);
         let frame0 = motion_controller.next_frame();
         assert_eq!(frame0.speed, 1.0);
         assert_eq!(frame0.position.theta, 0.0);
@@ -192,5 +196,21 @@ mod tests {
         assert_eq!(frame5.speed, 1.0);
         assert_eq!(frame5.position.theta, -0.4);
         assert_eq!(frame5.position.rho, 0.39999999999999997);
+        let frame6 = motion_controller.next_frame();
+        assert_eq!(frame6.speed, 1.096);
+        assert_eq!(frame6.position.theta, -0.32);
+        assert_eq!(frame6.position.rho, 0.31999999999999995);
+        let frame7 = motion_controller.next_frame();
+        assert_eq!(frame7.speed, 1.1920000000000002);
+        assert_eq!(frame7.position.theta, -0.24);
+        assert_eq!(frame7.position.rho, 0.23999999999999994);
+        let frame8 = motion_controller.next_frame();
+        assert_eq!(frame8.speed, 1.2880000000000003);
+        assert_eq!(frame8.position.theta, -0.15999999999999998);
+        assert_eq!(frame8.position.rho, 0.15999999999999992);
+        let frame9 = motion_controller.next_frame();
+        assert_eq!(frame9.speed, 1.2880000000000003);
+        assert_eq!(frame9.position.theta, -0.07999999999999996);
+        assert_eq!(frame9.position.rho, 0.0799999999999999);
     }
 }

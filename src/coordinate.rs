@@ -1,3 +1,6 @@
+use libm::fabs;
+
+#[derive(Clone)]
 pub struct PolarCoordinate {
     pub theta: f64,
     pub rho: f64,
@@ -6,8 +9,8 @@ pub struct PolarCoordinate {
 impl PolarCoordinate {
     pub fn distance(&self, other: &PolarCoordinate) -> f64 {
         let avg_rho = (other.rho + self.rho) / 2.0;
-        let theta_distance = (other.theta - self.theta).abs() * avg_rho;
-        let rho_distance = (other.rho - self.rho).abs();
+        let theta_distance = fabs(other.theta - self.theta) * avg_rho;
+        let rho_distance = fabs(other.rho - self.rho);
         theta_distance + rho_distance
     }
 
@@ -39,13 +42,6 @@ impl PolarCoordinate {
         }
     }
 
-    pub fn copy(&self) -> Self {
-       PolarCoordinate {
-           theta: self.theta,
-           rho: self.rho,
-       }
-    }
-
     pub fn equals(&self, other: &PolarCoordinate) -> bool {
         self.theta == other.theta && self.rho == other.rho
     }
@@ -54,7 +50,7 @@ impl PolarCoordinate {
 fn direction(value: f64) -> f64 {
     match value {
         0.0 => 0.0,
-        val => val / val.abs(),
+        val => val / fabs(val),
     }
 }
 
@@ -63,7 +59,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn polar_coordinate_equals() {
+    fn equals() {
         let a = PolarCoordinate { theta: 0.2, rho: 0.3 };
         let b = PolarCoordinate { theta: 0.2, rho: 0.3 };
         let c = PolarCoordinate { theta: 0.2, rho: 0.4 };
@@ -72,5 +68,17 @@ mod tests {
         assert_eq!(a.equals(&c), false);
         assert_eq!(a.equals(&d), false);
     }
-}
 
+    #[test]
+    fn direction() {
+        let a = PolarCoordinate { theta: 0.3, rho: 1.0 };
+        let a_direction = a.direction();
+        assert_eq!(a_direction.theta, 1.0);
+        assert_eq!(a_direction.rho, 1.0);
+
+        let b = PolarCoordinate { theta: -0.3, rho: 1.0 };
+        let b_direction = b.direction();
+        assert_eq!(b_direction.theta, -1.0);
+        assert_eq!(b_direction.rho, 1.0);
+    }
+}
