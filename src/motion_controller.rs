@@ -104,7 +104,12 @@ impl MotionController {
         };
         let step_size = current_checkpoint.step_size;
         let steps = current_checkpoint.steps;
-        let speed = current_frame.speed + (self.config.max_acceleration * acceleration_direction * step_size);
+        let slowdown_relative_distance = next_slowdown_distance - current_frame.absolute_distance;
+        let mut speed = current_frame.speed + (self.config.max_acceleration * acceleration_direction * step_size);
+        if slowdown_relative_distance > 0.0 && slowdown_relative_distance < current_checkpoint.step_size {
+            // hold speed as we don't have enough runway to accelerate, and it's too early to decelerate
+            speed = current_frame.speed;
+        }
         let scaled_vector = current_checkpoint.vector.scale(1.0 / (steps as f64));
         let next_frame = MotionFrame {
             position: current_frame.position.add(&scaled_vector),
