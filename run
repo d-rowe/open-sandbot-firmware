@@ -1,0 +1,1 @@
+cargo run --color=always --package open-sandbot-firmware --bin open-sandbot-firmware
