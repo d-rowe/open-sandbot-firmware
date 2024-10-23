@@ -1,6 +1,6 @@
 use crate::stepper::Stepper;
 use embassy_rp::gpio::{AnyPin, Level, Output};
-use embassy_rp::Peripherals;
+use embassy_rp::PeripheralRef;
 use embassy_time::Timer;
 use libm::fabs;
 
@@ -10,12 +10,20 @@ pub struct StepperPair<'a> {
     enable_output: Output<'a, AnyPin>,
 }
 
+pub struct StepperPairPins {
+    pub stepper0_step_pin: PeripheralRef<'static, AnyPin>,
+    pub stepper0_dir_pin: PeripheralRef<'static, AnyPin>,
+    pub stepper1_step_pin: PeripheralRef<'static, AnyPin>,
+    pub stepper1_dir_pin: PeripheralRef<'static, AnyPin>,
+    pub stepper_enable_pin: PeripheralRef<'static, AnyPin>,
+}
+
 impl StepperPair<'_> {
-    pub fn new(p: Peripherals) -> Self {
+    pub fn new(pins: StepperPairPins) -> Self {
         StepperPair {
-            stepper_0: Stepper::new(AnyPin::from(p.PIN_14), AnyPin::from(p.PIN_15)),
-            stepper_1: Stepper::new(AnyPin::from(p.PIN_12), AnyPin::from(p.PIN_13)),
-            enable_output: Output::new(AnyPin::from(p.PIN_18), Level::Low),
+            stepper_0: Stepper::new(pins.stepper0_step_pin, pins.stepper0_dir_pin),
+            stepper_1: Stepper::new(pins.stepper1_step_pin, pins.stepper1_dir_pin),
+            enable_output: Output::new(pins.stepper_enable_pin, Level::Low),
         }
     }
 

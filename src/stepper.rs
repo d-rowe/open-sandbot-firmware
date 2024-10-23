@@ -1,4 +1,5 @@
-use embassy_rp::gpio::{AnyPin, Level, Output};
+use embassy_rp::{gpio, PeripheralRef};
+use gpio::{AnyPin, Level, Output};
 
 pub struct Stepper<'a> {
     step_pin: Output<'a, AnyPin>,
@@ -7,7 +8,10 @@ pub struct Stepper<'a> {
 }
 
 impl Stepper<'_> {
-    pub fn new<'a>(step_pin: AnyPin, dir_pin: AnyPin) -> Stepper<'a> {
+    pub fn new<'a>(
+        step_pin: PeripheralRef<'static, AnyPin>,
+        dir_pin: PeripheralRef<'static, AnyPin>,
+    ) -> Stepper<'a> {
         Stepper {
             step_pin: create_output(step_pin),
             dir_pin: create_output(dir_pin),
@@ -28,6 +32,6 @@ impl Stepper<'_> {
     }
 }
 
-fn create_output(pin: AnyPin) -> Output<'static, AnyPin> {
+fn create_output(pin: PeripheralRef<'static, AnyPin>) -> Output<'static, AnyPin> {
     Output::new(pin, Level::Low)
 }

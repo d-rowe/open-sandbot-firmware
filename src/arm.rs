@@ -1,4 +1,4 @@
-use crate::coordinate::PolarCoordinate;
+use crate::{coordinate::PolarCoordinate, stepper_pair::StepperPairPins};
 use crate::stepper_pair::StepperPair;
 use core::f64::consts::PI;
 use libm::{acos, fabs, pow, round};
@@ -36,14 +36,13 @@ pub struct Arm<'a> {
 }
 
 impl Arm<'_> {
-    pub fn new() -> Self {
-        let p = embassy_rp::init(Default::default());
+    pub fn new(stepper_pair_pins: StepperPairPins) -> Self {
         Arm {
             step_position: get_target_step_position(&PolarCoordinate {
                 theta: 0.0,
                 rho: 0.0,
             }),
-            stepper_pair: StepperPair::new(p),
+            stepper_pair: StepperPair::new(stepper_pair_pins),
         }
     }
 
