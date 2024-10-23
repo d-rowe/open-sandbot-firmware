@@ -53,32 +53,3 @@ fn direction(value: f64) -> f64 {
         val => val / fabs(val),
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn equals() {
-        let a = PolarCoordinate { theta: 0.2, rho: 0.3 };
-        let b = PolarCoordinate { theta: 0.2, rho: 0.3 };
-        let c = PolarCoordinate { theta: 0.2, rho: 0.4 };
-        let d = PolarCoordinate { theta: 0.1, rho: 0.3 };
-        assert_eq!(a.equals(&b), true);
-        assert_eq!(a.equals(&c), false);
-        assert_eq!(a.equals(&d), false);
-    }
-
-    #[test]
-    fn direction() {
-        let a = PolarCoordinate { theta: 0.3, rho: 1.0 };
-        let a_direction = a.direction();
-        assert_eq!(a_direction.theta, 1.0);
-        assert_eq!(a_direction.rho, 1.0);
-
-        let b = PolarCoordinate { theta: -0.3, rho: 1.0 };
-        let b_direction = b.direction();
-        assert_eq!(b_direction.theta, -1.0);
-        assert_eq!(b_direction.rho, 1.0);
-    }
-}

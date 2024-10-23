@@ -7,10 +7,7 @@ pub struct Stepper<'a> {
 }
 
 impl Stepper<'_> {
-    pub fn new<'a>(
-        step_pin: AnyPin,
-        dir_pin: AnyPin,
-    ) -> Stepper<'a> {
+    pub fn new<'a>(step_pin: AnyPin, dir_pin: AnyPin) -> Stepper<'a> {
         Stepper {
             step_pin: create_output(step_pin),
             dir_pin: create_output(dir_pin),
@@ -20,10 +17,10 @@ impl Stepper<'_> {
 
     pub fn step(&mut self, is_forward: bool) {
         if is_forward {
-            self.dir_pin.set_low();
+            self.dir_pin.set_high();
             self.current_step += 1;
         } else {
-            self.dir_pin.set_high();
+            self.dir_pin.set_low();
             self.current_step -= 1;
         }
 
