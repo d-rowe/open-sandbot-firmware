@@ -1,29 +1,40 @@
 #![no_std]
 #![no_main]
 
-use embassy_executor::Spawner;
-use embassy_rp::{gpio::AnyPin, uart::{Async, UartRx, UartTx}, Peripheral};
-use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, channel::Channel};
-use embassy_rp::bind_interrupts;
-use embassy_rp::peripherals::UART0;
-use embassy_rp::uart::{Config, InterruptHandler, Uart};
-use embassy_time::Timer;
-use stepper_pair::StepperPairPins;
 use arm::Arm;
 use coordinate::PolarCoordinate;
+use defmt::info;
+use embassy_executor::Spawner;
+use embassy_rp::bind_interrupts;
+use embassy_rp::peripherals::UART0;
+use embassy_rp::uart;
+use embassy_rp::{
+    gpio::AnyPin,
+    uart::{Async, UartRx, UartTx},
+    Peripheral,
+};
+use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, channel::Channel};
+use embassy_time::Timer;
+use stepper_pair::StepperPairPins;
+use control_buffer::ControlBuffer;
 use {defmt_rtt as _, panic_probe as _};
 
 mod arm;
 mod coordinate;
 mod stepper;
 mod stepper_pair;
+mod control_buffer;
+mod coordinate_queue;
 
 bind_interrupts!(struct Irqs {
-    UART0_IRQ => InterruptHandler<UART0>;
+    UART0_IRQ => uart::InterruptHandler<UART0>;
 });
 
 const MAX_POSITIONS: usize = 16384; // determines max size of queued pattern in positions
-static POSITION_CHANNEL: Channel<ThreadModeRawMutex, PolarCoordinate, MAX_POSITIONS> = Channel::new();
+static POSITION_CHANNEL: Channel<ThreadModeRawMutex, PolarCoordinate, MAX_POSITIONS> =
+    Channel::new();
+
+static BAUDRATE: u32 = 115200;
 
 #[embassy_executor::task]
 async fn arm_worker(stepper_pair_pins: StepperPairPins) {
@@ -37,8 +48,26 @@ async fn arm_worker(stepper_pair_pins: StepperPairPins) {
 #[embassy_executor::task]
 async fn uart_reader(mut rx: UartRx<'static, UART0, Async>) {
     loop {
-        let mut buf = [0u8, 8];
-        rx.read(&mut buf).await.unwrap();
+        let mut control_buffer = ControlBuffer::new();
+        loop {
+            let mut char_buf = [0u8];
+            let _rr = rx.read(&mut char_buf).await;
+            let _br = control_buffer.add_char_buf(&char_buf);
+            if control_buffer.is_complete() {
+                break;
+            }
+        }
+
+        let input = control_buffer.to_str().unwrap();
+        let mut args = input.split(' ');
+        let command = args.next().unwrap();
+
+        info!("{}", command);
+        if command == "MOVE" {
+            let theta_str = args.next().unwrap();
+            let rho_str = args.next().unwrap();
+            info!("Move to {}, {}", theta_str, rho_str);
+        }
     }
 }
 
@@ -46,21 +75,23 @@ async fn uart_reader(mut rx: UartRx<'static, UART0, Async>) {
 async fn uart_writer(mut tx: UartTx<'static, UART0, Async>) {
     loop {
         let _ = tx.write("Hi from the UART writer\r\n".as_bytes()).await;
-        Timer::after_secs(1).await;
+        Timer::after_secs(30).await;
     }
 }
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
-    let uart = Uart::new(
+    let mut uart_config = uart::Config::default();
+    uart_config.baudrate = BAUDRATE;
+    let uart = uart::Uart::new(
         p.UART0,
         p.PIN_0,
         p.PIN_1,
         Irqs,
         p.DMA_CH0,
         p.DMA_CH1,
-        Config::default()
+        uart_config,
     );
 
     let (tx, rx) = uart.split();
