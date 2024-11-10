@@ -1,12 +1,16 @@
 #![no_std]
 #![no_main]
 
+use embassy_executor::Spawner;
+use embassy_rp::{gpio::AnyPin, uart::{Async, UartRx, UartTx}, Peripheral};
+use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, channel::Channel};
+use embassy_rp::bind_interrupts;
+use embassy_rp::peripherals::UART0;
+use embassy_rp::uart::{Config, InterruptHandler, Uart};
+use embassy_time::Timer;
+use stepper_pair::StepperPairPins;
 use arm::Arm;
 use coordinate::PolarCoordinate;
-use embassy_executor::Spawner;
-use embassy_rp::{gpio::AnyPin, Peripheral};
-use embassy_sync::{blocking_mutex::raw::ThreadModeRawMutex, channel::Channel};
-use stepper_pair::StepperPairPins;
 use {defmt_rtt as _, panic_probe as _};
 
 mod arm;
@@ -14,20 +18,56 @@ mod coordinate;
 mod stepper;
 mod stepper_pair;
 
-static POSITION_CHANNEL: Channel<ThreadModeRawMutex, &PolarCoordinate, 10> = Channel::new();
+bind_interrupts!(struct Irqs {
+    UART0_IRQ => InterruptHandler<UART0>;
+});
+
+const MAX_POSITIONS: usize = 16384; // determines max size of queued pattern in positions
+static POSITION_CHANNEL: Channel<ThreadModeRawMutex, PolarCoordinate, MAX_POSITIONS> = Channel::new();
 
 #[embassy_executor::task]
 async fn arm_worker(stepper_pair_pins: StepperPairPins) {
     let mut arm = Arm::new(stepper_pair_pins);
     loop {
-        let coordinate: &PolarCoordinate = POSITION_CHANNEL.receive().await;
-        arm.move_to(coordinate).await;
+        let coordinate: PolarCoordinate = POSITION_CHANNEL.receive().await;
+        arm.move_to(&coordinate).await;
+    }
+}
+
+#[embassy_executor::task]
+async fn uart_reader(mut rx: UartRx<'static, UART0, Async>) {
+    loop {
+        let mut buf = [0u8, 8];
+        rx.read(&mut buf).await.unwrap();
+    }
+}
+
+#[embassy_executor::task]
+async fn uart_writer(mut tx: UartTx<'static, UART0, Async>) {
+    loop {
+        let _ = tx.write("Hi from the UART writer\r\n".as_bytes()).await;
+        Timer::after_secs(1).await;
     }
 }
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
     let p = embassy_rp::init(Default::default());
+    let uart = Uart::new(
+        p.UART0,
+        p.PIN_0,
+        p.PIN_1,
+        Irqs,
+        p.DMA_CH0,
+        p.DMA_CH1,
+        Config::default()
+    );
+
+    let (tx, rx) = uart.split();
+
+    spawner.spawn(uart_reader(rx)).unwrap();
+    spawner.spawn(uart_writer(tx)).unwrap();
+
     spawner
         .spawn(arm_worker(StepperPairPins {
             stepper0_step_pin: AnyPin::from(p.PIN_14).into_ref(),
@@ -39,13 +79,13 @@ async fn main(spawner: Spawner) {
         .unwrap();
 
     POSITION_CHANNEL
-        .send(&PolarCoordinate {
+        .send(PolarCoordinate {
             theta: 0.0,
             rho: 1.0,
         })
         .await;
     POSITION_CHANNEL
-        .send(&PolarCoordinate {
+        .send(PolarCoordinate {
             theta: 0.0,
             rho: 0.0,
         })
