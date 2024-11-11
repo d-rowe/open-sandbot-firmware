@@ -1,3 +1,4 @@
+use crate::coordinate_queue;
 use crate::{coordinate::PolarCoordinate, stepper_pair::StepperPairPins};
 use crate::stepper_pair::StepperPair;
 use core::f64::consts::PI;
@@ -9,6 +10,15 @@ const DEGREES_PER_STEP: f64 = 1.8;
 const MICRO_STEPS: f64 = 16.0;
 
 const STEPS_PER_DEG: f64 = MICRO_STEPS * MAIN_PULLEY_TEETH / MOTOR_PULLEY_TEETH / DEGREES_PER_STEP;
+
+#[embassy_executor::task]
+pub async fn arm_task(stepper_pair_pins: StepperPairPins) {
+    let mut arm = Arm::new(stepper_pair_pins);
+    loop {
+        let coordinate = coordinate_queue::dequeue().await;
+        arm.move_to(&coordinate).await;
+    }
+}
 
 struct StepPosition {
     primary_steps: i64,
@@ -30,7 +40,7 @@ impl StepPosition {
     }
 }
 
-pub struct Arm<'a> {
+struct Arm<'a> {
     step_position: StepPosition,
     stepper_pair: StepperPair<'a>,
 }
