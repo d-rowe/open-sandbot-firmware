@@ -1,10 +1,14 @@
+use defmt::info;
 use embassy_rp::{peripherals::UART0, uart::{Async, UartTx}};
-use embassy_time::Timer;
+
+use crate::transmission_channel;
 
 #[embassy_executor::task]
 pub async fn writer_task(mut tx: UartTx<'static, UART0, Async>) {
     loop {
-        let _ = tx.write("Hi from the UART writer\r\n".as_bytes()).await;
-        Timer::after_secs(30).await;
+        info!("waiting for message");
+        let msg = transmission_channel::receive().await;
+        info!("received {}", msg);
+        let _ = tx.write(msg.as_bytes()).await;
     }
 }
