@@ -9,16 +9,16 @@ impl fmt::Display for EOLReachedError {
     }
 }
 
-pub struct ControlBuffer {
+pub struct CommandBuffer {
     buf: [u8; 256],
     current_buf_idx: usize,
     is_eol: bool,
 }
 
 
-impl ControlBuffer {
+impl CommandBuffer {
     pub fn new() -> Self {
-        ControlBuffer {
+        CommandBuffer {
             buf: [0u8; 256],
             current_buf_idx: 0,
             is_eol: false,

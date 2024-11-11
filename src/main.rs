@@ -19,11 +19,12 @@ mod arm;
 mod coordinate;
 mod stepper;
 mod stepper_pair;
-mod control_buffer;
+mod command_buffer;
 mod coordinate_queue;
 mod uart_reader;
 mod uart_writer;
 mod transmission_channel;
+mod command_executor;
 
 bind_interrupts!(struct Irqs {
     UART0_IRQ => uart::InterruptHandler<UART0>;
