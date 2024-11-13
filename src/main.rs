@@ -19,7 +19,7 @@ mod arm;
 mod coordinate;
 mod stepper;
 mod stepper_pair;
-mod control_buffer;
+mod command;
 mod coordinate_queue;
 mod uart_reader;
 mod uart_writer;

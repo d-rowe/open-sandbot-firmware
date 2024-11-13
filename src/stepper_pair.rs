@@ -57,7 +57,7 @@ impl StepperPair<'_> {
                 s1_partial_steps -= 1.0;
             }
 
-            Timer::after_millis(5).await;
+            Timer::after_millis(2).await;
         }
 
         self.disengage();

@@ -9,36 +9,37 @@ impl fmt::Display for EOLReachedError {
     }
 }
 
-pub struct ControlBuffer {
+pub struct Command {
     buf: [u8; 256],
     current_buf_idx: usize,
     is_eol: bool,
 }
 
 
-impl ControlBuffer {
+impl Command {
     pub fn new() -> Self {
-        ControlBuffer {
+        Command {
             buf: [0u8; 256],
             current_buf_idx: 0,
             is_eol: false,
         }
     }
 
-    pub fn add_char_buf(&mut self, char_buf: &[u8; 1]) -> Result<usize, EOLReachedError> {
+    pub fn add_char_buf(&mut self, char_buf: &[u8; 1]) -> Result<(), EOLReachedError> {
         if self.is_eol {
             return Err(EOLReachedError {});
         }
         let buf_utf8 = from_utf8(char_buf).unwrap();
         let char = buf_utf8.chars().next().unwrap();
         if char == EOL_CHAR {
+            // str split treats last split different, add extra split char to avoid
+            self.buf[self.current_buf_idx] = b' ';
             self.is_eol = true;
-            return Ok(self.current_buf_idx);
+            return Ok(());
         }
         self.buf[self.current_buf_idx] = char_buf[0];
-        let last_buf_idx = self.current_buf_idx;
         self.current_buf_idx += 1;
-        Ok(last_buf_idx)
+        Ok(())
     }
 
     pub fn is_complete(&self) -> bool {
