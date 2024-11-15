@@ -1,4 +1,4 @@
-use crate::coordinate_queue;
+use crate::{coordinate_queue, transmission_channel};
 use crate::{coordinate::PolarCoordinate, stepper_pair::StepperPairPins};
 use crate::stepper_pair::StepperPair;
 use core::f64::consts::PI;
@@ -62,6 +62,7 @@ impl Arm<'_> {
 
         if delta_step_position.get_total_steps() == 0 {
             // already at target position
+            transmission_channel::send("STATUS IDLE").await;
             return;
         }
 
@@ -71,8 +72,8 @@ impl Arm<'_> {
                 delta_step_position.secondary_steps,
             )
             .await;
-
         self.step_position = target_step_position;
+        transmission_channel::send("STATUS IDLE").await;
     }
 }
 

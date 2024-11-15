@@ -1,6 +1,7 @@
+use defmt::info;
 use embassy_rp::{peripherals::UART0, uart::{Async, UartRx}};
 
-use crate::{command::Command, coordinate::PolarCoordinate, coordinate_queue, transmission_channel};
+use crate::{command::Command, coordinate::PolarCoordinate, coordinate_queue};
 
 static MOVE: &str = "MOVE";
 
@@ -18,11 +19,11 @@ pub async fn reader_task(mut rx: UartRx<'static, UART0, Async>) {
         }
 
         let input = command.to_str().unwrap();
+        info!("received message: {}", input);
         let mut args = input.split(' ');
         let method = args.next().unwrap();
 
         if method == MOVE {
-            transmission_channel::send("MOVE ACK;").await;
             let theta_str = args.next().unwrap();
             let rho_str = args.next().unwrap();
             coordinate_queue::queue(PolarCoordinate {

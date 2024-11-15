@@ -8,6 +8,7 @@ pub struct StepperPair<'a> {
     stepper_0: Stepper<'a>,
     stepper_1: Stepper<'a>,
     enable_output: Output<'a, AnyPin>,
+    speed: u8,
 }
 
 pub struct StepperPairPins {
@@ -20,11 +21,14 @@ pub struct StepperPairPins {
 
 impl StepperPair<'_> {
     pub fn new(pins: StepperPairPins) -> Self {
-        StepperPair {
+        let mut stepper_pair = StepperPair {
             stepper_0: Stepper::new(pins.stepper0_step_pin, pins.stepper0_dir_pin),
             stepper_1: Stepper::new(pins.stepper1_step_pin, pins.stepper1_dir_pin),
             enable_output: Output::new(pins.stepper_enable_pin, Level::Low),
-        }
+            speed: 90,
+        };
+        stepper_pair.disengage();
+        stepper_pair
     }
 
     pub async fn move_to(&mut self, stepper_0_steps: i64, stepper_1_steps: i64) {
@@ -56,11 +60,9 @@ impl StepperPair<'_> {
                 s1_steps += 1;
                 s1_partial_steps -= 1.0;
             }
-
-            Timer::after_millis(2).await;
+            let delay = ((100 - self.speed as u64) * 100) + 250;
+            Timer::after_micros(delay).await;
         }
-
-        self.disengage();
     }
 
     fn engage(&mut self) {

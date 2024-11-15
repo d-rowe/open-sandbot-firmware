@@ -1,7 +1,5 @@
 use core::{fmt, str::{from_utf8, Utf8Error}};
 
-static EOL_CHAR: char = ';';
-
 pub struct EOLReachedError {}
 impl fmt::Display for EOLReachedError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -10,7 +8,7 @@ impl fmt::Display for EOLReachedError {
 }
 
 pub struct Command {
-    buf: [u8; 256],
+    buf: [u8; 32],
     current_buf_idx: usize,
     is_eol: bool,
 }
@@ -19,7 +17,7 @@ pub struct Command {
 impl Command {
     pub fn new() -> Self {
         Command {
-            buf: [0u8; 256],
+            buf: [0u8; 32],
             current_buf_idx: 0,
             is_eol: false,
         }
@@ -29,15 +27,14 @@ impl Command {
         if self.is_eol {
             return Err(EOLReachedError {});
         }
-        let buf_utf8 = from_utf8(char_buf).unwrap();
-        let char = buf_utf8.chars().next().unwrap();
-        if char == EOL_CHAR {
+        let current_byte = char_buf[0];
+        if current_byte == b'\n' {
             // str split treats last split different, add extra split char to avoid
             self.buf[self.current_buf_idx] = b' ';
             self.is_eol = true;
             return Ok(());
         }
-        self.buf[self.current_buf_idx] = char_buf[0];
+        self.buf[self.current_buf_idx] = current_byte;
         self.current_buf_idx += 1;
         Ok(())
     }
