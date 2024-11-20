@@ -1,5 +1,14 @@
 ## OpenSandbot
-OpenSandbot is an open-source robotic kinetic art table. It has four components: build, hardware, firmware, and app software.
+OpenSandbot is an open-source robotic kinetic art table. It has four components: parts, hardware, firmware, and app.
 
 ### Firmware
-This firmware is responsible for the robot's ability to understand and move through patterns.
+This firmware is written in rust for the $4 Raspberry Pi Pico and provides a UART API on [UART0](https://pico.pinout.xyz/) to control the sandbot.
+
+### API
+The API expects messages to be formatted as `METHOD[ ARG0][ ARG1]\n`. All messages (rx and tx) expect the new line character (`\n`) to signal the end of message.
+
+- Movement: Ex.  `MOVE 1.2 0.5` would move to theta 1.2 rho 0.5.
+
+The API also emits the status messages
+- `STATUS IDLE`: the sandbot is not currently moving
+- `STATUS MOVING` the sandbot is currently moving to a target position. You may still queue more coordinates at this time.
